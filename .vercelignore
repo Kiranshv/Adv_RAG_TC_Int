@@ -1,0 +1,11 @@
+.git/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+qdrant_data/
+data/uploads/
+testcase/
+_monitor_ingest.py
+restart_app.ps1
