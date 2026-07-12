@@ -27,7 +27,10 @@ load_dotenv(override=True)
 
 app = Flask(__name__)
 
-DATA_DIR = BASE_DIR / "data"
+IS_SERVERLESS = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+RUNTIME_BASE_DIR = Path("/tmp") if IS_SERVERLESS else BASE_DIR
+
+DATA_DIR = RUNTIME_BASE_DIR / "data"
 UPLOAD_DIR = DATA_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 COLLECTION_NAME = "vwo_test_cases"
@@ -48,10 +51,19 @@ GROQ_MODEL = os.getenv("GROQ_MODEL", "deepseek-r1-distill-llama-70b")
 USE_GROQ = os.getenv("LLM_PROVIDER", "openrouter").lower() == "groq"
 
 QDRANT_URL = os.getenv("QDRANT_URL", "").strip()
-if QDRANT_URL:
-    qdrant = QdrantClient(url=QDRANT_URL)
-else:
-    qdrant = QdrantClient(path=str(BASE_DIR / "qdrant_data"))
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "").strip()
+qdrant = None
+qdrant_init_error = ""
+try:
+    if QDRANT_URL:
+        qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY or None)
+    else:
+        local_qdrant_path = (Path("/tmp") / "qdrant_data") if IS_SERVERLESS else (BASE_DIR / "qdrant_data")
+        local_qdrant_path.mkdir(parents=True, exist_ok=True)
+        qdrant = QdrantClient(path=str(local_qdrant_path))
+except Exception as ex:
+    qdrant = None
+    qdrant_init_error = str(ex)
 
 
 @dataclass
@@ -95,6 +107,9 @@ def emit_event(stage: str, status: str, detail: Dict):
 
 
 def hydrate_chunks_cache_from_qdrant(force: bool = False) -> int:
+    if qdrant is None:
+        return 0
+
     if state["chunks_cache"] and not force:
         return len(state["chunks_cache"])
 
@@ -283,6 +298,9 @@ def split_text(text: str) -> List[str]:
 
 
 def ensure_collection(dim: int = 1024):
+    if qdrant is None:
+        raise RuntimeError("Qdrant is not available")
+
     existing = [c.name for c in qdrant.get_collections().collections]
     if COLLECTION_NAME in existing:
         qdrant.delete_collection(COLLECTION_NAME)
@@ -557,6 +575,9 @@ def rewrite_query(question: str) -> List[str]:
 
 
 def dense_sparse_search(query: str, top_n: int = TOP_N_HYBRID):
+    if qdrant is None:
+        raise RuntimeError("Qdrant is not available")
+
     dense, sparse = embed_texts([query])
     dense_q = dense[0]
     sparse_idx, sparse_vals = sparse[0]
@@ -777,6 +798,9 @@ def api_selection():
 
 @app.route("/api/ingest/start", methods=["POST"])
 def api_ingest_start():
+    if qdrant is None:
+        return jsonify({"ok": False, "error": f"Qdrant unavailable: {qdrant_init_error or 'init failed'}"}), 503
+
     if state["ingest_running"]:
         return jsonify({"ok": True, "message": "Ingest already running"})
 
@@ -848,6 +872,9 @@ def api_chat():
     question = (payload.get("question") or "").strip()
     if not question:
         return jsonify({"error": "Question is required"}), 400
+    if qdrant is None:
+        return jsonify({"error": f"Qdrant unavailable: {qdrant_init_error or 'init failed'}"}), 503
+
     if not state["chunks_cache"]:
         hydrate_chunks_cache_from_qdrant()
     if not state["chunks_cache"]:
@@ -913,6 +940,8 @@ def api_health():
             "chunks_indexed": cached,
             "rewrite_enabled": REWRITE_ENABLED,
             "llm_provider": "groq" if USE_GROQ else "openrouter",
+            "qdrant_ready": qdrant is not None,
+            "qdrant_init_error": qdrant_init_error,
         }
     )
 
