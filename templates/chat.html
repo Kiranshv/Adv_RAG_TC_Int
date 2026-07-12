@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="two-pane">
+  <aside class="pane stage-pane">
+    <h2>Query Pipeline</h2>
+    <p class="muted-small">Live retrieval trace for QA auditability and release confidence.</p>
+    <ul id="chat-stage-list" class="stage-list"></ul>
+    <div id="chat-debug" class="codebox"></div>
+  </aside>
+  <section class="pane content-pane">
+    <h2>Grounded Chat</h2>
+    <div class="chat-actions-row">
+      <span class="subtle-badge" id="subtle-cases">Indexed Cases: --</span>
+      <button id="clear-chat" class="btn ghost" type="button">Clear Chat</button>
+    </div>
+    <div class="quick-prompts" id="quick-prompts">
+      <button class="qp" data-q="List all P0 and P1 cases for Login and Checkout, grouped by module.">Regression</button>
+      <button class="qp" data-q="Login timeout changed. Which test cases are impacted first?">Impact</button>
+      <button class="qp" data-q="Show critical areas with weak coverage for this release.">Readiness</button>
+      <button class="qp" data-q="Find missing negative scenarios for OTP retry and lockout.">Gap</button>
+      <button class="qp" data-q="Create a new test case for JIRA VWO-1234 using similar historical cases.">Generate</button>
+    </div>
+    <div id="chat-box" class="chat-box"></div>
+    <div style="margin-top: 8px; display: flex; gap: 8px;">
+      <button id="export-jira" class="btn" type="button">Export Last Response to Jira CSV</button>
+      <button id="copy-answer" class="btn ghost" type="button">Copy Last Answer</button>
+    </div>
+    <form id="chat-form" class="chat-form">
+      <input id="question" placeholder="Ask about VWO test cases or generate a new one..." required />
+      <button class="btn" type="submit">Send</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

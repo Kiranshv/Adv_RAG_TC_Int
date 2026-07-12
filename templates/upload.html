@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel">
+  <h1>Upload Dataset</h1>
+  <p>Supports CSV, XLSX, XLS. Choose text columns for embeddings and metadata columns for Qdrant payload filters.</p>
+  <form id="upload-form" class="stack">
+    <input type="file" id="file" name="file" accept=".csv,.xlsx,.xls" required />
+    <button type="submit" class="btn">Upload & Preview</button>
+  </form>
+  <div id="upload-result" class="stack"></div>
+</section>
+{% endblock %}

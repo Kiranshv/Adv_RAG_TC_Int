@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced RAG Explorer - Concept Guide</title>
+  <style>
+    :root {
+      --cream: #f7efe4;
+      --sand: #f2e2ce;
+      --ink: #2f2722;
+      --muted: #6f6258;
+      --coral: #e66a52;
+      --sea: #5e8f8a;
+      --surface: rgba(255, 250, 245, 0.86);
+      --stroke: #e8d5c2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, #fff8ef 0%, transparent 34%),
+        radial-gradient(circle at 85% 18%, #ffdbc9 0%, transparent 30%),
+        radial-gradient(circle at 80% 84%, #cae8e3 0%, transparent 30%),
+        var(--cream);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .hero {
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      padding: 26px;
+      background: var(--surface);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 12px 26px rgba(90, 60, 30, 0.08);
+      animation: rise .7s ease-out;
+    }
+    @keyframes rise { from { transform: translateY(12px); opacity: .2; } to { transform: translateY(0); opacity: 1; } }
+    h1 { margin: 0; font-size: 2rem; }
+    h2 { margin-top: 0; }
+    p { color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .card {
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      background: var(--surface);
+      padding: 18px;
+      animation: rise .6s ease-out;
+    }
+
+    .pipeline {
+      margin-top: 16px;
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      background: linear-gradient(140deg, #fffaf4, #fff2e7);
+      padding: 18px;
+      overflow-x: auto;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(130px, 1fr));
+      gap: 10px;
+      align-items: center;
+      min-width: 1100px;
+    }
+
+    .node {
+      background: #fff;
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+      font-weight: 700;
+      position: relative;
+      min-height: 84px;
+      display: grid;
+      place-items: center;
+    }
+
+    .node::after {
+      content: "";
+      position: absolute;
+      right: -22px;
+      top: 50%;
+      width: 16px;
+      height: 2px;
+      background: var(--coral);
+      transform: translateY(-50%);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    .node:last-child::after { display: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: .3; transform: translateY(-50%) scaleX(.9); }
+      50% { opacity: 1; transform: translateY(-50%) scaleX(1.2); }
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #ffe1d8;
+      color: #8c3f2f;
+      font-size: .75rem;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .steps { margin-top: 14px; display: grid; gap: 10px; }
+    .step {
+      border-left: 4px solid var(--sea);
+      background: #f8fffd;
+      border: 1px solid #d0ebe6;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .mono {
+      font-family: Consolas, Monaco, monospace;
+      font-size: .9rem;
+      background: #fffaf4;
+      border: 1px dashed var(--stroke);
+      border-radius: 10px;
+      padding: 10px;
+      overflow: auto;
+    }
+
+    .highlight {
+      background: #ffe6d9;
+      color: #7d2f1f;
+      padding: 0 6px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .prompt-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .prompt-item {
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      background: #fffdf9;
+      padding: 10px;
+    }
+
+    .prompt-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    .copy-btn {
+      border: 1px solid #f3c0ad;
+      background: #ffe8de;
+      color: #7d2f1f;
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: .78rem;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .copy-btn:hover { filter: brightness(0.97); }
+
+    details.interactive {
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      background: #fff;
+      padding: 8px 10px;
+    }
+
+    details.interactive summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #423730;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .check {
+      border: 1px solid #d9ebe6;
+      background: #f8fffd;
+      border-left: 4px solid var(--sea);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    #toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #2f2722;
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: .85rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all .2s ease;
+      pointer-events: none;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 960px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Advanced RAG Explorer</h1>
+      <p>
+        A complete, teachable Retrieval-Augmented Generation stack for The Testing Academy,
+        built around 5,000 VWO test cases with hybrid search, reranking, query rewriting,
+        and grounded generation.
+      </p>
+      <div>
+        <span class="tag">Hybrid Retrieval: bge-m3 dense+sparse</span>
+        <span class="tag">Vector DB: Qdrant embedded</span>
+        <span class="tag">Re-ranker: bge-reranker-v2-m3</span>
+        <span class="tag">LLM: OpenRouter or Groq</span>
+      </div>
+    </section>
+
+    <section class="pipeline">
+      <h2>End-to-End Pipeline Diagram</h2>
+      <div class="flow">
+        <div class="node">CSV/XLSX Upload</div>
+        <div class="node">Row Documents</div>
+        <div class="node">Chunking</div>
+        <div class="node">bge-m3 Embed<br>(dense+sparse)</div>
+        <div class="node">Qdrant Index</div>
+        <div class="node">Query Rewrite</div>
+        <div class="node">Hybrid Search + RRF</div>
+        <div class="node">Cross-Encoder Re-rank</div>
+        <div class="node">Grounded Answer</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>How It Was Built</h2>
+        <div class="steps">
+          <div class="step"><strong>1. Data Layer</strong><br>5,000 synthetic JIRA-format VWO test cases were generated into a CSV corpus.</div>
+          <div class="step"><strong>2. Ingestion Layer</strong><br>Upload, schema preview, text/meta column selection, chunking, embedding, indexing.</div>
+          <div class="step"><strong>3. Retrieval Layer</strong><br>Dense and sparse retrieval run in parallel, then fused via Reciprocal Rank Fusion.</div>
+          <div class="step"><strong>4. Precision Layer</strong><br>Top candidates are reranked with BAAI cross-encoder for better relevance.</div>
+          <div class="step"><strong>5. Generation Layer</strong><br>LLM answers with chunk-grounded context and explicit citations.</div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Key Components</h2>
+        <ul>
+          <li><strong>app.py</strong> - Flask API + UI pages + SSE stage updates.</li>
+          <li><strong>ingest.py</strong> - Optional CLI uploader and ingest trigger.</li>
+          <li><strong>Qdrant collection</strong> - vwo_test_cases with dense+sparse vectors.</li>
+          <li><strong>/upload</strong> - Data onboarding and feature selection.</li>
+          <li><strong>/ingest</strong> - Live pipeline visibility.</li>
+          <li><strong>/chunks</strong> - Corpus browser with metadata filters.</li>
+          <li><strong>/chat</strong> - Rewrite, retrieve, rerank, generate flow.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Modes in Chat</h2>
+        <p><strong>Answer mode:</strong> grounded Q&A over indexed test cases with <span class="highlight">[Chunk N] references</span>.</p>
+        <p><strong>Generate mode:</strong> prompts like "create a new test case for JIRA VWO-1234" return a structured testcase template derived from retrieved examples.</p>
+        <p><strong>Compatibility:</strong> Works with existing CSVs once uploaded and ingested, as long as core fields such as <span class="highlight">title</span>, <span class="highlight">steps</span>, <span class="highlight">expected</span>, <span class="highlight">priority</span>, <span class="highlight">module</span>, and <span class="highlight">jira_id</span> are present.</p>
+      </article>
+
+      <article class="card">
+        <h2>Teaching Demo Script</h2>
+        <div class="mono">1) Upload testcase CSV
+2) Select text/meta columns
+3) Start ingest and explain each stage
+4) Open chunks and inspect sparse/dense previews
+5) Ask questions in chat, show rewrites + rerank
+6) Trigger generate mode and compare output quality</div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>High-Value QA Prompts</h2>
+        <div class="prompt-grid">
+          <div class="prompt-item">
+            <div class="prompt-head">🧪 Regression Planning <button class="copy-btn" data-copy="List all P0 and P1 cases for Login and Checkout, grouped by module.">Copy</button></div>
+            <div>List all <span class="highlight">P0/P1</span> cases for Login and Checkout, grouped by module.</div>
+          </div>
+          <div class="prompt-item">
+            <div class="prompt-head">📌 Impact Analysis <button class="copy-btn" data-copy="Login timeout changed. Which test cases are impacted first?">Copy</button></div>
+            <div>Login timeout changed. Which test cases are impacted first?</div>
+          </div>
+          <div class="prompt-item">
+            <div class="prompt-head">🚦 Release Readiness <button class="copy-btn" data-copy="Show critical areas with weak coverage for this release.">Copy</button></div>
+            <div>Show critical areas with weak coverage for this release.</div>
+          </div>
+          <div class="prompt-item">
+            <div class="prompt-head">🕳️ Gap Analysis <button class="copy-btn" data-copy="Find missing negative scenarios for OTP retry and lockout.">Copy</button></div>
+            <div>Find missing negative scenarios for OTP retry and lockout.</div>
+          </div>
+          <div class="prompt-item">
+            <div class="prompt-head">⚡ Case Generation <button class="copy-btn" data-copy="Create a new test case for JIRA VWO-5678 using similar historical cases.">Copy</button></div>
+            <div>Create a new test case for JIRA VWO-5678 using similar historical cases.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Useful Dev + QA Prompts</h2>
+        <details class="interactive" open>
+          <summary>🔍 Change Validation</summary>
+          <div class="prompt-item" style="margin-top:8px;">
+            API auth token format changed. Which existing tests should be updated?
+            <div style="margin-top:8px;"><button class="copy-btn" data-copy="API auth token format changed. Which existing tests should be updated?">Copy</button></div>
+          </div>
+        </details>
+        <details class="interactive" style="margin-top:8px;" open>
+          <summary>🎯 Risk-Based Retest</summary>
+          <div class="prompt-item" style="margin-top:8px;">
+            Rank impacted test cases by priority and module for fast retest.
+            <div style="margin-top:8px;"><button class="copy-btn" data-copy="Rank impacted test cases by priority and module for fast retest.">Copy</button></div>
+          </div>
+        </details>
+        <details class="interactive" style="margin-top:8px;" open>
+          <summary>🛡️ Failure Prevention</summary>
+          <div class="prompt-item" style="margin-top:8px;">
+            Show ambiguous expected results that can cause false pass/fail.
+            <div style="margin-top:8px;"><button class="copy-btn" data-copy="Show ambiguous expected results that can cause false pass/fail.">Copy</button></div>
+          </div>
+        </details>
+        <details class="interactive" style="margin-top:8px;" open>
+          <summary>💼 Business Value Check</summary>
+          <div class="prompt-item" style="margin-top:8px;">
+            Summarize top release risks and blocker scenarios from current corpus.
+            <div style="margin-top:8px;"><button class="copy-btn" data-copy="Summarize top release risks and blocker scenarios from current corpus.">Copy</button></div>
+          </div>
+        </details>
+      </article>
+    </section>
+
+    <section class="card" style="margin-top: 16px;">
+      <h2>30-Second Daily Usage</h2>
+      <div class="checklist">
+        <div class="check">⚡ Ask one focused question (<span class="highlight">regression</span>, <span class="highlight">impact</span>, <span class="highlight">release</span>, or <span class="highlight">gap</span>).</div>
+        <div class="check">✅ Validate answer using cited chunks before action.</div>
+        <div class="check">📤 Export useful generated case to Jira CSV.</div>
+        <div class="check">🗣️ Share top risks and blockers in standup.</div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top: 16px;">
+      <h2>Configuration Knobs</h2>
+      <div class="mono">CHUNK_SIZE=1000
+CHUNK_OVERLAP=150
+TOP_N_HYBRID=20
+TOP_K_RERANK=4
+RRF_K=60
+REWRITE_ENABLED=true
+BGE_USE_FP16=1
+INGEST_BATCH=32</div>
+    </section>
+  </div>
+  <div id="toast">Copied prompt</div>
+  <script>
+    (function () {
+      const toast = document.getElementById("toast");
+      const showToast = (msg) => {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 1200);
+      };
+
+      document.querySelectorAll(".copy-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const text = btn.getAttribute("data-copy") || "";
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast("Prompt copied");
+          } catch (e) {
+            showToast("Copy failed");
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

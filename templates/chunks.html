@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel">
+  <h1>Chunk Explorer</h1>
+  <div class="filters">
+    <input id="f-q" placeholder="Search chunk text..." />
+    <input id="f-priority" placeholder="priority" />
+    <input id="f-module" placeholder="module" />
+    <input id="f-jira" placeholder="jira_id" />
+    <button id="apply-filter" class="btn">Filter</button>
+  </div>
+  <div id="chunks-list" class="stack"></div>
+  <div class="pager">
+    <button id="prev-page" class="btn">Prev</button>
+    <span id="page-label">Page 1</span>
+    <button id="next-page" class="btn">Next</button>
+  </div>
+</section>
+{% endblock %}

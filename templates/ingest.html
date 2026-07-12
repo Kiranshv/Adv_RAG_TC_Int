@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="two-pane">
+  <aside class="pane stage-pane">
+    <h2>Pipeline Stage Tracker</h2>
+    <ul id="stage-list" class="stage-list"></ul>
+    <button id="start-ingest" class="btn">Start Ingestion</button>
+  </aside>
+  <section class="pane content-pane">
+    <h2>Live Ingestion Events (SSE)</h2>
+    <div id="event-log" class="codebox"></div>
+  </section>
+</div>
+{% endblock %}
